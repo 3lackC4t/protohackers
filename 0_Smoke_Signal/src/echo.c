@@ -9,18 +9,6 @@
 #define BUFFER_SIZE 32
 #define PORT 9999
 
-void handleCommunication(int client_fd) {
-  char buffer[BUFFER_SIZE];
-  ssize_t bytes_recieved;
-
-  while ((bytes_recieved = recv(client_fd, buffer, BUFFER_SIZE - 1, 0))) {
-    buffer[bytes_recieved] = '\0';
-    printf("Received %s\n", buffer);
-
-    send(client_fd, buffer, bytes_recieved, 0);
-  }
-}
-
 void handleError(const char *message, int socket_fd, int exitingFlag) {
   perror(message);
 
@@ -29,6 +17,27 @@ void handleError(const char *message, int socket_fd, int exitingFlag) {
   }
 
   exit(EXIT_FAILURE);
+}
+
+void handleCommunication(int client_fd) {
+  char buffer[BUFFER_SIZE];
+  ssize_t bytes_recieved;
+
+  while ((bytes_recieved = recv(client_fd, buffer, BUFFER_SIZE - 1, 0)) > 0) {
+
+    buffer[bytes_recieved] = '\0';
+    printf("Received %s\n", buffer);
+
+    send(client_fd, buffer, bytes_recieved, 0);
+  }
+
+  if (bytes_recieved == 0) {
+    printf("Client Disconnected.\n");
+  } else {
+    perror("recv() error");
+  }
+
+  close(client_fd);
 }
 
 void echoServer() {
@@ -46,7 +55,8 @@ void echoServer() {
   server_addr.sin_addr.s_addr = INADDR_ANY;
   server_addr.sin_port = htons(PORT);
 
-  if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr))) {
+  if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) <
+      0) {
     handleError("Socket Bind Failuer", server_fd, 1);
   }
 
